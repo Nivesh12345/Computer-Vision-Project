@@ -1,117 +1,94 @@
-# Parking Space Detection System
+# Parking Space Detection
 
-Simple and effective parking space occupancy detection using OpenCV.
+A parking space occupancy detector using OpenCV. It detects whether parking spaces are free or occupied by analyzing video frames.
 
-## Features
+## What It Does
 
-- **Polygon-based parking spaces** - Define any shape parking spots
-- **Temporal filtering** - Stable detection without flickering
-- **Real-time visualization** - Color-coded spaces with confidence scores
-- **CSV export** - Track occupancy over time
-- **Interactive controls** - Pause, screenshot, debug view
+The system processes video frames to detect cars in predefined parking spaces. It uses image processing techniques like thresholding and pixel counting - no machine learning required.
 
-## Quick Start
+## Setup
 
-### 1. Install Dependencies
+First, install the dependencies:
 
-```powershell
+```bash
 pip install -r requirements.txt
 ```
 
-### 2. Define Parking Spaces
+## Usage
 
-```powershell
+### Step 1: Mark Parking Spaces
+
+Run the polygon picker to define your parking spaces:
+
+```bash
 python PolygonSpacePicker.py
 ```
 
 - Left-click 4 corners for each parking space
 - Right-click to delete a space
-- Press 'q' when done
+- Press 'q' to quit and save
 
-### 3. Run Detector
+The parking space coordinates are saved to the `polygons` file.
 
-```powershell
-# Improved version (recommended)
-python improved_detector.py
+### Step 2: Run the Detector
 
-# Original version with trackbars
-python m.py
+```bash
+python main.py
 ```
 
-## Keyboard Controls
+The detector will:
 
-**improved_detector.py:**
+- Load the video (`carPark.mp4` by default)
+- Process each frame
+- Show green boxes for free spaces, red for occupied
+- Save results to `detection_results.csv`
+
+## Controls
+
+While the detector is running:
+
 - **ESC** or **Q** - Quit
 - **P** - Pause/Resume
-- **T** - Toggle processed view (debug)
+- **T** - Toggle processed view (shows the thresholded image)
 - **S** - Save screenshot
-
-**m.py:**
-- **ESC** or **Q** - Quit
-- Trackbars to adjust threshold parameters
 
 ## Command Line Options
 
-```powershell
-# Use different video
-python improved_detector.py --video myVideo.mp4
+```bash
+# Use a different video file
+python main.py --video myVideo.mp4
 
-# Show preprocessing
-python improved_detector.py --show-processed
+# Show the processed frames (debug mode)
+python main.py --show-processed
 
-# Don't loop video
-python improved_detector.py --no-loop
+# Don't loop the video
+python main.py --no-loop
 
-# Don't save CSV
-python improved_detector.py --no-save
+# Don't save CSV results
+python main.py --no-save
 ```
 
 ## Files
 
-- `improved_detector.py` - Enhanced detector with temporal filtering
-- `m.py` - Original detector with trackbars
-- `main.py` - Original rectangle-based detector
-- `PolygonSpacePicker.py` - Define polygon parking spaces
-- `ParkingSpacePicker.py` - Define rectangle parking spaces
-- `polygons` - Saved polygon positions
-- `CarParkPos` - Saved rectangle positions
-
-## Output
-
-**CSV File** (`detection_results.csv`):
-```csv
-timestamp,free,occupied,total,occupancy_rate
-2025-11-06 22:00:00,15,5,20,25.0
-```
+- `main.py` - Main detector script
+- `PolygonSpacePicker.py` - Tool to mark parking spaces
+- `polygons` - Saved parking space coordinates (created after using PolygonSpacePicker)
+- `carPark.mp4` - Video file to process
+- `carParkImg.png` - Reference image for marking spaces
 
 ## How It Works
 
-1. **Preprocessing**: Grayscale → Blur → Adaptive Threshold → Median Blur → Dilation
-2. **Detection**: Count white pixels in each parking space polygon
-3. **Temporal Filtering**: Use 5-frame history for stable results
-4. **Visualization**: Draw color-coded polygons and statistics
+1. **Preprocessing**: Converts video frames to grayscale, applies blur, then adaptive thresholding to create a binary image
+2. **Detection**: For each parking space polygon, counts white pixels (which represent cars)
+3. **Filtering**: Uses a 5-frame history to smooth out flickering
+4. **Display**: Shows green boxes for free spaces, red for occupied ones
 
-## Performance
+## Output
 
-- **Speed**: 60+ FPS on CPU
-- **Accuracy**: ~85-90% (depends on lighting)
-- **Dependencies**: Just OpenCV, NumPy, cvzone
+Results are saved to `detection_results.csv` with columns:
 
-## Troubleshooting
-
-**Video won't open:**
-- Check file path
-- Ensure video file exists
-
-**No parking spaces:**
-- Run `PolygonSpacePicker.py` first
-- Check `polygons` file exists
-
-**Poor detection:**
-- Adjust trackbars in `m.py`
-- Check lighting conditions
-- Verify parking space polygons are accurate
-
-## License
-
-MIT
+- timestamp
+- free (number of free spaces)
+- occupied (number of occupied spaces)
+- total (total spaces)
+- occupancy_rate (percentage)

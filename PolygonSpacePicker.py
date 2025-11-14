@@ -2,18 +2,18 @@ import cv2
 import pickle
 import numpy as np
 
-# Configuration
+# Settings
 IMG_PATH = 'carParkImg.png'
-SAVE_FILE = 'polygons'  # pickle filename
+SAVE_FILE = 'polygons'
 POINTS_PER_POLYGON = 4
 
 try:
     with open(SAVE_FILE, 'rb') as f:
         polygons = pickle.load(f)
 except:
-    polygons = []  # list of list-of-(x,y)
+        polygons = []
 
-current_pts = []  # points for the polygon being drawn
+current_pts = []
 
 
 def draw():
@@ -29,7 +29,7 @@ def draw():
         pts = np.array(poly, np.int32)
         cv2.polylines(overlay, [pts], isClosed=True, color=(255, 0, 255), thickness=2)
         cv2.fillPoly(overlay, [pts], color=(255, 0, 255, 50))
-        # draw index
+        # Draw space number
         cx = int(np.mean([p[0] for p in poly]))
         cy = int(np.mean([p[1] for p in poly]))
         cv2.putText(overlay, str(i + 1), (cx - 10, cy + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
@@ -40,7 +40,7 @@ def draw():
         if i > 0:
             cv2.line(overlay, current_pts[i - 1], current_pts[i], (0, 255, 255), 2)
 
-    # if complete in-progress polygon, close it visually
+    # Close polygon visually when complete
     if len(current_pts) == POINTS_PER_POLYGON:
         pts = np.array(current_pts, np.int32)
         cv2.polylines(overlay, [pts], isClosed=True, color=(0, 255, 255), thickness=2)
@@ -54,7 +54,7 @@ def save():
 
 
 def point_in_poly(x, y, poly):
-    # cv2.pointPolygonTest expects numpy array of points
+    """Check if point is inside polygon"""
     pts = np.array(poly, np.int32)
     return cv2.pointPolygonTest(pts, (x, y), False) >= 0
 
@@ -62,17 +62,17 @@ def point_in_poly(x, y, poly):
 def mouse_callback(event, x, y, flags, param):
     global current_pts, polygons
     if event == cv2.EVENT_LBUTTONDOWN:
-        # add point
+        # Add point to current polygon
         if len(current_pts) < POINTS_PER_POLYGON:
             current_pts.append((x, y))
             if len(current_pts) == POINTS_PER_POLYGON:
-                # complete polygon
+                # Polygon complete, save it
                 polygons.append(current_pts.copy())
                 current_pts = []
                 save()
 
     elif event == cv2.EVENT_RBUTTONDOWN:
-        # delete polygon if clicked inside
+        # Delete polygon if clicked inside
         for i, poly in enumerate(polygons):
             if point_in_poly(x, y, poly):
                 polygons.pop(i)
@@ -85,12 +85,12 @@ def main():
     cv2.setMouseCallback('Image', mouse_callback)
 
     print('Controls:')
-    print(' - Left click: add point (4 points per polygon)')
-    print(' - Right click: delete polygon under cursor')
-    print(' - u: undo last in-progress point')
-    print(' - r: reset current in-progress points')
-    print(' - s: save polygons')
-    print(' - q or Esc: quit')
+    print('  Left click: add point (4 points per polygon)')
+    print('  Right click: delete polygon')
+    print('  u: undo last point')
+    print('  r: reset current polygon')
+    print('  s: save')
+    print('  q or Esc: quit')
 
     while True:
         draw()

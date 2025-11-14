@@ -1,7 +1,5 @@
-"""
-Improved Parking Detector - Simple and Effective
-Enhanced version of the original with better features, no complex dependencies
-"""
+# Parking space detector using OpenCV
+# Detects occupied vs free parking spaces in video
 import cv2
 import pickle
 import numpy as np
@@ -11,7 +9,7 @@ import csv
 
 
 class ImprovedParkingDetector:
-    """Enhanced parking detector with temporal filtering and better visualization"""
+    """Parking detector with temporal filtering to reduce flickering"""
     
     def __init__(self, video_path='carPark.mp4', spaces_file='polygons'):
         # Load video
@@ -31,10 +29,10 @@ class ImprovedParkingDetector:
                 else:
                     self.polygons.append(item)
             
-            print(f"✓ Loaded {len(self.polygons)} parking spaces")
+            print(f"Loaded {len(self.polygons)} parking spaces")
         except FileNotFoundError:
             print(f"Parking spaces file not found: {spaces_file}")
-            print("   Run PolygonSpacePicker.py first")
+            print("Run PolygonSpacePicker.py first to mark parking spaces")
             raise
         
         # Temporal filtering - track last N states for each space
@@ -54,10 +52,10 @@ class ImprovedParkingDetector:
         # Results tracking
         self.results = []
         
-        print("✓ Detector initialized")
+        print("Detector ready")
     
     def preprocess_frame(self, frame):
-        """Apply preprocessing pipeline"""
+        """Convert frame to binary image for detection"""
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, self.gaussian_kernel, 1)
         
@@ -77,7 +75,7 @@ class ImprovedParkingDetector:
         return dilated
     
     def check_space(self, processed_frame, polygon):
-        """Check if a single parking space is occupied"""
+        """Check if parking space is occupied by counting white pixels"""
         h, w = processed_frame.shape[:2]
         
         # Create mask for polygon
@@ -100,7 +98,7 @@ class ImprovedParkingDetector:
         return is_occupied, confidence, count
     
     def apply_temporal_filter(self, space_index, is_occupied):
-        """Apply temporal filtering to reduce flickering"""
+        """Use frame history to smooth out detection flickering"""
         self.space_history[space_index].append(is_occupied)
         
         # Need at least 3 frames for filtering
@@ -112,7 +110,7 @@ class ImprovedParkingDetector:
         return occupied_count > len(self.space_history[space_index]) / 2
     
     def visualize_frame(self, frame, space_states):
-        """Draw parking spaces and statistics on frame"""
+        """Draw parking spaces and stats on the video frame"""
         output = frame.copy()
         free_count = 0
         
@@ -161,7 +159,7 @@ class ImprovedParkingDetector:
         return output, free_count, total
     
     def save_results(self, filename='detection_results.csv'):
-        """Save detection results to CSV"""
+        """Save results to CSV file"""
         if not self.results:
             return
         
@@ -170,10 +168,10 @@ class ImprovedParkingDetector:
             writer.writerow(['timestamp', 'free', 'occupied', 'total', 'occupancy_rate'])
             writer.writerows(self.results)
         
-        print(f"✓ Results saved to {filename}")
+        print(f"Results saved to {filename}")
     
     def run(self, show_processed=False, save_results=True, loop=True):
-        """Run the detector"""
+        """Main loop - process video frames"""
         print("\n" + "="*60)
         print("  Parking Space Detector Running")
         print("="*60)
@@ -240,7 +238,7 @@ class ImprovedParkingDetector:
                     break
                 elif key == ord('p'):  # Pause
                     paused = not paused
-                    print("⏸ Paused" if paused else "▶ Resumed")
+                    print("Paused" if paused else "Resumed")
                 elif key == ord('t'):  # Toggle processed view
                     show_thresh = not show_thresh
                     if not show_thresh:
@@ -248,7 +246,7 @@ class ImprovedParkingDetector:
                 elif key == ord('s'):  # Save screenshot
                     filename = f"screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
                     cv2.imwrite(filename, annotated)
-                    print(f"✓ Saved {filename}")
+                    print(f"Saved {filename}")
         
         finally:
             self.cap.release()
@@ -257,13 +255,13 @@ class ImprovedParkingDetector:
             if save_results:
                 self.save_results()
             
-            print(f"\n✓ Processed {frame_count} frames")
+            print(f"\nProcessed {frame_count} frames")
 
 
 def main():
     import argparse
     
-    parser = argparse.ArgumentParser(description="Improved Parking Space Detector")
+    parser = argparse.ArgumentParser(description="Parking Space Detector")
     parser.add_argument("--video", default="carPark.mp4", help="Video file path")
     parser.add_argument("--spaces", default="polygons", help="Parking spaces file")
     parser.add_argument("--show-processed", action="store_true", help="Show processed frames")
@@ -280,7 +278,7 @@ def main():
             loop=not args.no_loop
         )
     except Exception as e:
-        print(f"\n Error: {e}")
+        print(f"\nError: {e}")
         import traceback
         traceback.print_exc()
 
