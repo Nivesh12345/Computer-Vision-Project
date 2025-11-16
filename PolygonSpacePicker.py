@@ -2,7 +2,6 @@ import cv2
 import pickle
 import numpy as np
 
-# Settings
 IMG_PATH = 'carParkImg.png'
 SAVE_FILE = 'polygons'
 POINTS_PER_POLYGON = 4
@@ -24,23 +23,19 @@ def draw():
 
     overlay = img.copy()
 
-    # Draw saved polygons
     for i, poly in enumerate(polygons):
         pts = np.array(poly, np.int32)
         cv2.polylines(overlay, [pts], isClosed=True, color=(255, 0, 255), thickness=2)
         cv2.fillPoly(overlay, [pts], color=(255, 0, 255, 50))
-        # Draw space number
         cx = int(np.mean([p[0] for p in poly]))
         cy = int(np.mean([p[1] for p in poly]))
         cv2.putText(overlay, str(i + 1), (cx - 10, cy + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
 
-    # Draw current in-progress polygon
     for i, p in enumerate(current_pts):
         cv2.circle(overlay, p, 4, (0, 255, 255), -1)
         if i > 0:
             cv2.line(overlay, current_pts[i - 1], current_pts[i], (0, 255, 255), 2)
 
-    # Close polygon visually when complete
     if len(current_pts) == POINTS_PER_POLYGON:
         pts = np.array(current_pts, np.int32)
         cv2.polylines(overlay, [pts], isClosed=True, color=(0, 255, 255), thickness=2)
@@ -62,17 +57,14 @@ def point_in_poly(x, y, poly):
 def mouse_callback(event, x, y, flags, param):
     global current_pts, polygons
     if event == cv2.EVENT_LBUTTONDOWN:
-        # Add point to current polygon
         if len(current_pts) < POINTS_PER_POLYGON:
             current_pts.append((x, y))
             if len(current_pts) == POINTS_PER_POLYGON:
-                # Polygon complete, save it
                 polygons.append(current_pts.copy())
                 current_pts = []
                 save()
 
     elif event == cv2.EVENT_RBUTTONDOWN:
-        # Delete polygon if clicked inside
         for i, poly in enumerate(polygons):
             if point_in_poly(x, y, poly):
                 polygons.pop(i)

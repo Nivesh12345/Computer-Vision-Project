@@ -1,5 +1,3 @@
-# Parking space detector using OpenCV
-# Detects occupied vs free parking spaces in video
 import cv2
 import pickle
 import numpy as np
@@ -12,12 +10,10 @@ class ImprovedParkingDetector:
     """Parking detector with temporal filtering to reduce flickering"""
     
     def __init__(self, video_path='carPark.mp4', spaces_file='polygons'):
-        # Load video
         self.cap = cv2.VideoCapture(video_path)
         if not self.cap.isOpened():
             raise ValueError(f"Could not open video: {video_path}")
         
-        # Load parking spaces
         try:
             with open(spaces_file, 'rb') as f:
                 data = pickle.load(f)
@@ -35,21 +31,17 @@ class ImprovedParkingDetector:
             print("Run PolygonSpacePicker.py first to mark parking spaces")
             raise
         
-        # Temporal filtering - track last N states for each space
         self.history_size = 5
         self.space_history = [deque(maxlen=self.history_size) for _ in self.polygons]
         
-        # Preprocessing parameters (tunable)
         self.gaussian_kernel = (3, 3)
         self.adaptive_block = 25
         self.adaptive_c = 16
         self.median_kernel = 5
         
-        # Detection parameters
         self.threshold_multiplier = 0.18
         self.min_threshold = 300
         
-        # Results tracking
         self.results = []
         
         print("Detector ready")
@@ -77,21 +69,13 @@ class ImprovedParkingDetector:
     def check_space(self, processed_frame, polygon):
         """Check if parking space is occupied by counting white pixels"""
         h, w = processed_frame.shape[:2]
-        
-        # Create mask for polygon
         mask = np.zeros((h, w), dtype=np.uint8)
         pts = polygon.reshape((-1, 1, 2)).astype(np.int32)
         cv2.fillPoly(mask, [pts], 255)
-        
-        # Apply mask and count non-zero pixels
         cropped = cv2.bitwise_and(processed_frame, processed_frame, mask=mask)
         count = cv2.countNonZero(cropped)
-        
-        # Calculate adaptive threshold based on polygon area
         area = cv2.contourArea(pts)
         threshold = max(self.min_threshold, int(area * self.threshold_multiplier))
-        
-        # Determine occupancy
         is_occupied = count >= threshold
         confidence = min(1.0, count / threshold) if threshold > 0 else 0.0
         
@@ -100,12 +84,8 @@ class ImprovedParkingDetector:
     def apply_temporal_filter(self, space_index, is_occupied):
         """Use frame history to smooth out detection flickering"""
         self.space_history[space_index].append(is_occupied)
-        
-        # Need at least 3 frames for filtering
         if len(self.space_history[space_index]) < 3:
             return is_occupied
-        
-        # Majority vote
         occupied_count = sum(self.space_history[space_index])
         return occupied_count > len(self.space_history[space_index]) / 2
     
@@ -116,39 +96,24 @@ class ImprovedParkingDetector:
         
         for i, (polygon, is_occupied, confidence, count) in enumerate(space_states):
             pts = polygon.reshape((-1, 1, 2)).astype(np.int32)
-            
             if is_occupied:
-                color = (0, 0, 255)  # Red
+                color = (0, 0, 255)
                 thickness = 2
             else:
-                color = (0, 255, 0)  # Green
+                color = (0, 255, 0)
                 thickness = 3
                 free_count += 1
-            
-            # Draw polygon
             cv2.polylines(output, [pts], isClosed=True, color=color, thickness=thickness)
-            
-            # Draw space number and confidence
             cx = int(np.mean(polygon[:, 0]))
             cy = int(np.mean(polygon[:, 1]))
-            
-            # Space number
             cv2.putText(output, str(i + 1), (cx - 15, cy - 10),
                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-            
-            # Confidence
             cv2.putText(output, f"{confidence:.2f}", (cx - 20, cy + 15),
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-        
-        # Draw summary box
         total = len(space_states)
         occupancy_rate = (total - free_count) / total * 100 if total > 0 else 0
-        
-        # Background for text
         cv2.rectangle(output, (10, 10), (400, 120), (0, 0, 0), -1)
         cv2.rectangle(output, (10, 10), (400, 120), (255, 255, 255), 2)
-        
-        # Text
         cv2.putText(output, f"Free: {free_count}/{total}", (20, 45),
                    cv2.FONT_HERSHEY_SIMPLEX, 1.2, (0, 255, 0), 3)
         cv2.putText(output, f"Occupied: {total - free_count}/{total}", (20, 80),
@@ -189,7 +154,6 @@ class ImprovedParkingDetector:
         try:
             while True:
                 if not paused:
-                    # Loop video if enabled
                     if self.cap.get(cv2.CAP_PROP_POS_FRAMES) == self.cap.get(cv2.CAP_PROP_FRAME_COUNT):
                         if loop:
                             self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
@@ -199,51 +163,33 @@ class ImprovedParkingDetector:
                     success, frame = self.cap.read()
                     if not success:
                         break
-                    
-                    # Preprocess
                     processed = self.preprocess_frame(frame)
-                    
-                    # Check all parking spaces
                     space_states = []
                     for i, polygon in enumerate(self.polygons):
                         is_occupied, confidence, count = self.check_space(processed, polygon)
-                        
-                        # Apply temporal filtering
                         is_occupied = self.apply_temporal_filter(i, is_occupied)
-                        
                         space_states.append((polygon, is_occupied, confidence, count))
-                    
-                    # Visualize
                     annotated, free_count, total = self.visualize_frame(frame, space_states)
-                    
-                    # Save results
-                    if save_results and frame_count % 30 == 0:  # Every 30 frames
+                    if save_results and frame_count % 30 == 0:
                         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         occupied = total - free_count
                         occupancy_rate = occupied / total * 100 if total > 0 else 0
                         self.results.append([timestamp, free_count, occupied, total, occupancy_rate])
-                    
                     frame_count += 1
-                    
-                    # Display
                     cv2.imshow("Parking Detection", annotated)
-                    
                     if show_thresh:
                         cv2.imshow("Processed", processed)
-                
-                # Handle keyboard input
                 key = cv2.waitKey(10) & 0xFF
-                
-                if key == 27 or key == ord('q'):  # ESC or Q
+                if key == 27 or key == ord('q'):
                     break
-                elif key == ord('p'):  # Pause
+                elif key == ord('p'):
                     paused = not paused
                     print("Paused" if paused else "Resumed")
-                elif key == ord('t'):  # Toggle processed view
+                elif key == ord('t'):
                     show_thresh = not show_thresh
                     if not show_thresh:
                         cv2.destroyWindow("Processed")
-                elif key == ord('s'):  # Save screenshot
+                elif key == ord('s'):
                     filename = f"screenshot_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
                     cv2.imwrite(filename, annotated)
                     print(f"Saved {filename}")
